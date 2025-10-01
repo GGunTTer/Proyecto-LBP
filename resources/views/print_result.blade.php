@@ -37,45 +37,59 @@
 
   function showStatus(msg){ if(statusEl) statusEl.textContent = msg; }
 
+  
+  function closePopup() {
+    try { window.close(); } catch(e) {}
+    setTimeout(() => {
+      try { window.open('', '_self'); window.close(); } catch(e) {}
+    }, 100);
+  }
+
+  
+  let closeTimer = null;
+  function scheduleClose(ms){
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(closePopup, Math.max(500, ms)); 
+  }
+
   if (!('Notification' in window)) {
-    showStatus('Este navegador no soporta notificaciones.');
-    openBtn.style.display = 'inline-block';
+    showStatus('Este navegador no soporta notificaciones. Cerrando…');
+    scheduleClose(1200);
     return;
   }
 
   Notification.requestPermission().then(function (perm) {
     if (perm !== 'granted') {
-      showStatus('Permiso denegado. Puedes abrir el detalle manualmente.');
-      openBtn.style.display = 'inline-block';
+      showStatus('Permiso denegado. Cerrando…');
+      scheduleClose(1200);
       return;
     }
 
     try {
       const n = new Notification(title, { body: body, icon: icon });
+      showStatus('Notificación mostrada.');
 
-      
       if (Array.isArray(vibrate) && navigator.vibrate) {
         navigator.vibrate(vibrate);
       }
 
+     
       n.onclick = function () {
-        window.location.href = clickUrl;
-        window.focus();
-        n.close();
+        try { window.location.href = clickUrl; } catch(e) {}
+        try { n.close(); } catch(e) {}
+        scheduleClose(200); 
       };
 
-      const t = Math.max(3000, Math.min(timeoutMs, 60000)); 
-      setTimeout(function(){ try{ n.close(); }catch(e){} }, t);
+      
+      const notifAuto = Math.max(3000, Math.min(Number(timeoutMs || 15000), 60000));
+      setTimeout(() => { try { n.close(); } catch(e) {} }, notifAuto);
 
       
-      setTimeout(function(){ try{ window.close(); }catch(e){} }, t + 400);
+      scheduleClose(Number(displayMs || 4000));
 
-      showStatus('Notificación mostrada.');
-
-      window.close() 
     } catch (e) {
-      showStatus('No se pudo crear la notificación: ' + e.message);
-      openBtn.style.display = 'inline-block';
+      showStatus('No se pudo crear la notificación. Cerrando…');
+      scheduleClose(1200);
     }
   });
 })();
