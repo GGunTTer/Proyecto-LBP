@@ -10,33 +10,9 @@ use Illuminate\Support\Facades\Log;
 
 Route::match(['GET','POST'], '/', [PrinterController::class, 'print']);
 
-Route::get('/print', function () {
-    return view('welcome');
-})->name('home');
 
-Route::get('/test-print', function () {
-    try {
-        $connector = new WindowsPrintConnector("lp0");
-        $printer = new Printer($connector);
-        $printer->text("Hola Mundo desde Laravel\n");
-        $printer->cut();
-        $printer->close();
-        return "Impresión enviada!";
-    } catch (\Exception $e) {
-        return "Error: " . $e->getMessage();
-    }
-});
+Route::get('/test-print', TestPrintController::class, 'test-print');
 
 
-Route::get('/notify-test', function () {
-    try {
-        Notification::title('Prueba de notificación')
-            ->message('Si ves esto, NativePHP está ok')
-            ->show();
-        return 'OK';
-    } catch (\Throwable $e) {
-        Log::warning('notify-test failed', ['err' => $e->getMessage()]);
-        return 'FAIL: '.$e->getMessage();
-    }
-});
+
 
