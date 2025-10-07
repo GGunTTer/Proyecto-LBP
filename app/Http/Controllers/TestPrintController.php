@@ -9,9 +9,8 @@ use Throwable;
 
 class TestPrintController extends Controller
 {
-    public function print()
+    public function testprint()
     {
-        // Usa PRINTER_NAME del .env o "lp0" como fallback
         $printerName = config('printing.default_printer', env('PRINTER_NAME', 'lp0'));
 
         try {

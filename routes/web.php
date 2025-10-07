@@ -7,6 +7,5 @@ use App\Http\Controllers\TestPrintController;
 Route::match(['GET','POST'], '/', [PrinterController::class, 'print']);
 
 
-Route::get('/test-print', TestPrintController::class, 'test-print');
-
+Route::get('/test-print', [TestPrintController::class, 'testprint'])->name('test.print');
 

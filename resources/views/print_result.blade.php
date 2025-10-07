@@ -25,9 +25,9 @@
 </div>
 
 <script>
-(function(){
+(function () {
   const title     = @json($title ?? 'Notificación');
-  const body      = {!! json_encode($body ?? '') !!};
+  const bodyText  = @json($body ?? '');
   const icon      = @json($icon ?? null);
   const timeoutMs = Number(@json($timeoutMs ?? 15000));
   const clickUrl  = @json($clickUrl ?? 'about:blank');
@@ -35,60 +35,72 @@
   const statusEl  = document.getElementById('status');
   const openBtn   = document.getElementById('openLink');
 
-  function showStatus(msg){ if(statusEl) statusEl.textContent = msg; }
+  function showStatus(msg) { if (statusEl) statusEl.textContent = msg; }
 
-  
+  function safeShowOpenBtn() {
+    if (openBtn) {
+      openBtn.style.display = 'inline-block';
+      openBtn.href = clickUrl || 'about:blank';
+    }
+  }
+
   function closePopup() {
-    try { window.close(); } catch(e) {}
+    try { window.close(); } catch (e) {}
+    // fallback para navegadores que exigen _self
     setTimeout(() => {
-      try { window.open('', '_self'); window.close(); } catch(e) {}
+      try { window.open('', '_self'); window.close(); } catch (e) {}
     }, 100);
   }
 
-  
   let closeTimer = null;
-  function scheduleClose(ms){
+  function scheduleClose(ms) {
     if (closeTimer) clearTimeout(closeTimer);
-    closeTimer = setTimeout(closePopup, Math.max(500, ms)); 
+    closeTimer = setTimeout(closePopup, Math.max(500, Number(ms) || 1200));
   }
 
   if (!('Notification' in window)) {
-    showStatus('Este navegador no soporta notificaciones. Cerrando…');
+    showStatus('Este navegador no soporta notificaciones.');
+    safeShowOpenBtn();
     scheduleClose(1200);
     return;
   }
 
   Notification.requestPermission().then(function (perm) {
     if (perm !== 'granted') {
-      showStatus('Permiso denegado. Cerrando…');
+      showStatus('Permiso de notificaciones denegado.');
+      safeShowOpenBtn();
       scheduleClose(1200);
       return;
     }
 
     try {
-      const n = new Notification(title, { body: body, icon: icon });
+      const n = new Notification(title, { body: bodyText, icon: icon || undefined });
+
       showStatus('Notificación mostrada.');
 
+      // Vibración opcional
       if (Array.isArray(vibrate) && navigator.vibrate) {
         navigator.vibrate(vibrate);
       }
 
-     
+      // Click en la notificación → ir al detalle y cerrar
       n.onclick = function () {
-        try { window.location.href = clickUrl; } catch(e) {}
-        try { n.close(); } catch(e) {}
-        scheduleClose(200); 
+        try { window.focus(); } catch (e) {}
+        try { n.close(); } catch (e) {}
+        if (clickUrl) {
+          try { window.location.assign(clickUrl); } catch (e) {}
+        }
+        scheduleClose(300);
       };
 
-      
-      const notifAuto = Math.max(3000, Math.min(Number(timeoutMs || 15000), 60000));
-      setTimeout(() => { try { n.close(); } catch(e) {} }, notifAuto);
-
-      
-      scheduleClose(Number(displayMs || 4000));
+      // Auto-cierre de la notificación y luego de la ventana
+      const notifMs = Math.max(3000, Math.min(timeoutMs || 15000, 60000));
+      setTimeout(() => { try { n.close(); } catch (e) {} }, notifMs);
+      scheduleClose(notifMs + 300);
 
     } catch (e) {
-      showStatus('No se pudo crear la notificación. Cerrando…');
+      showStatus('No se pudo crear la notificación: ' + e.message);
+      safeShowOpenBtn();
       scheduleClose(1200);
     }
   });
